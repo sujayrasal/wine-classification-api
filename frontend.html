@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wine Classification Dashboard</title>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* ── Design Tokens ─────────────────── */
+    :root {
+      --bg:           #f7f6f2;
+      --surface:      #ffffff;
+      --border:       #e0ddd8;
+      --text:         #28251d;
+      --text-muted:   #7a7974;
+      --primary:      #01696f;
+      --primary-light:#e6f2f2;
+      --barbera:      #c0392b;
+      --grigio:       #2980b9;
+      --nebbiolo:     #27ae60;
+      --radius:       0.75rem;
+      --shadow:       0 4px 12px rgba(0,0,0,0.07);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────── */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 600; }
+    header span { font-size: 0.9rem; opacity: 0.8; margin-left: auto; }
+
+    /* ── Main Layout ──────────────────── */
+    main {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── Config Bar ───────────────────── */
+    .config-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+    }
+    .config-bar label { font-size: 0.875rem; color: var(--text-muted); }
+    .config-bar input {
+      flex: 1;
+      min-width: 280px;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      background: var(--bg);
+    }
+    .config-bar input:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+    .btn {
+      padding: 0.55rem 1.25rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+
+    /* ── KPI Cards ────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .kpi-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+    }
+    .kpi-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .kpi-card.barbera .kpi-value  { color: var(--barbera); }
+    .kpi-card.grigio .kpi-value   { color: var(--grigio); }
+    .kpi-card.nebbiolo .kpi-value { color: var(--nebbiolo); }
+
+    /* ── Charts Grid ──────────────────── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .chart-card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    /* ── Results Table ────────────────── */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+    .table-card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    thead tr { background: var(--bg); }
+    th {
+      text-align: left;
+      padding: 0.6rem 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--primary-light); }
+
+    /* ── Badges ───────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.barbera  { background: #fde8e8; color: var(--barbera); }
+    .badge.grigio   { background: #e8f4fd; color: var(--grigio); }
+    .badge.nebbiolo { background: #e8f8ee; color: var(--nebbiolo); }
+
+    /* ── Status ───────────────────────── */
+    .status {
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      display: none;
+    }
+    .status.info    { background: #e8f4fd; color: #1a5276; display: block; }
+    .status.error   { background: #fde8e8; color: #922b21; display: block; }
+    .status.success { background: #e8f8ee; color: #1e8449; display: block; }
+
+    /* ── Loading Spinner ──────────────── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid white;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Empty State ──────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+    }
+    .empty-state p { margin-top: 0.5rem; font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────── -->
+<header>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+       stroke="white" stroke-width="2">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+  <h1>Wine Classification Dashboard</h1>
+  <span>Expt 9 — Prediction Visualizer</span>
+</header>
+
+<main>
+
+  <!-- ── Config Bar ─────────────────────── -->
+  <div class="config-bar">
+    <label for="apiUrl">API URL</label>
+    <input id="apiUrl" type="text"
+           value="http://127.0.0.1:8000/predict"
+           placeholder="http://YOUR_EC2_IP:8000/predict" />
+    <label for="apiKey">API Key</label>
+    <input id="apiKey" type="password"
+           value="wine-secret-key-2024"
+           placeholder="X-API-Key value" />
+    <button class="btn btn-primary" onclick="runPredictions()">
+      Run Predictions
+    </button>
+    <button class="btn btn-secondary" onclick="clearResults()">
+      Clear
+    </button>
+  </div>
+
+  <!-- ── Status Bar ─────────────────────── -->
+  <div id="status" class="status"></div>
+
+  <!-- ── KPI Cards ──────────────────────── -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Samples</div>
+      <div class="kpi-value" id="kpiTotal">—</div>
+    </div>
+    <div class="kpi-card barbera">
+      <div class="kpi-label">🍷 Barbera</div>
+      <div class="kpi-value" id="kpiBarbera">—</div>
+    </div>
+    <div class="kpi-card grigio">
+      <div class="kpi-label">🥂 Grigio</div>
+      <div class="kpi-value" id="kpiGrigio">—</div>
+    </div>
+    <div class="kpi-card nebbiolo">
+      <div class="kpi-label">🍾 Nebbiolo</div>
+      <div class="kpi-value" id="kpiNebbiolo">—</div>
+    </div>
+  </div>
+
+  <!-- ── Charts ─────────────────────────── -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h2>📊 Prediction Distribution (Bar)</h2>
+      <canvas id="barChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>🥧 Cultivar Breakdown (Pie)</h2>
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Results Table ──────────────────── -->
+  <div class="table-card">
+    <h2>📋 Prediction Results Table</h2>
+    <div id="tableContainer">
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+             stroke="#bab9b4" stroke-width="1.5">
+          <path d="M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z"/>
+        </svg>
+        <p>Click <strong>Run Predictions</strong> to load test data and see results</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Test Data (10 wine samples) ──────────────────────────
+const TEST_DATA = [
+  {alcohol:14.23,malic_acid:1.71,ash:2.43,alcalinity_of_ash:15.6,magnesium:127,total_phenols:2.80,flavanoids:3.06,nonflavanoid_phenols:0.28,proanthocyanins:2.29,color_intensity:5.64,hue:1.04,od280_od315_of_diluted_wines:3.92,proline:1065},
+  {alcohol:13.20,malic_acid:1.78,ash:2.14,alcalinity_of_ash:11.2,magnesium:100,total_phenols:2.65,flavanoids:2.76,nonflavanoid_phenols:0.26,proanthocyanins:1.28,color_intensity:4.38,hue:1.05,od280_od315_of_diluted_wines:3.40,proline:1050},
+  {alcohol:13.16,malic_acid:2.36,ash:2.67,alcalinity_of_ash:18.6,magnesium:101,total_phenols:2.80,flavanoids:3.24,nonflavanoid_phenols:0.30,proanthocyanins:2.81,color_intensity:5.68,hue:1.03,od280_od315_of_diluted_wines:3.17,proline:1185},
+  {alcohol:12.37,malic_acid:1.17,ash:1.92,alcalinity_of_ash:19.6,magnesium:78,total_phenols:1.75,flavanoids:1.63,nonflavanoid_phenols:0.16,proanthocyanins:1.25,color_intensity:3.30,hue:0.97,od280_od315_of_diluted_wines:1.41,proline:290},
+  {alcohol:11.56,malic_acid:2.05,ash:3.23,alcalinity_of_ash:28.5,magnesium:119,total_phenols:3.18,flavanoids:5.08,nonflavanoid_phenols:0.47,proanthocyanins:1.87,color_intensity:6.00,hue:0.93,od280_od315_of_diluted_wines:3.69,proline:465},
+  {alcohol:14.83,malic_acid:1.64,ash:2.17,alcalinity_of_ash:14.0,magnesium:97,total_phenols:2.80,flavanoids:2.98,nonflavanoid_phenols:0.29,proanthocyanins:1.98,color_intensity:5.20,hue:1.08,od280_od315_of_diluted_wines:2.85,proline:1045},
+  {alcohol:13.86,malic_acid:1.35,ash:2.27,alcalinity_of_ash:16.0,magnesium:98,total_phenols:2.98,flavanoids:3.15,nonflavanoid_phenols:0.22,proanthocyanins:1.85,color_intensity:7.22,hue:1.01,od280_od315_of_diluted_wines:3.55,proline:1045},
+  {alcohol:12.93,malic_acid:3.80,ash:2.65,alcalinity_of_ash:18.6,magnesium:102,total_phenols:2.41,flavanoids:2.41,nonflavanoid_phenols:0.25,proanthocyanins:1.98,color_intensity:4.50,hue:1.03,od280_od315_of_diluted_wines:3.52,proline:770},
+  {alcohol:13.71,malic_acid:1.86,ash:2.36,alcalinity_of_ash:16.6,magnesium:101,total_phenols:2.61,flavanoids:2.88,nonflavanoid_phenols:0.27,proanthocyanins:1.69,color_intensity:3.80,hue:1.11,od280_od315_of_diluted_wines:4.00,proline:1035},
+  {alcohol:12.22,malic_acid:1.29,ash:1.94,alcalinity_of_ash:19.0,magnesium:92,total_phenols:2.36,flavanoids:2.04,nonflavanoid_phenols:0.39,proanthocyanins:2.08,color_intensity:2.70,hue:0.86,od280_od315_of_diluted_wines:3.02,proline:312}
+];
+
+let barChartInstance = null;
+let pieChartInstance = null;
+
+// ── Show status ──────────────────────────────────────────
+function showStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = `status ${type}`;
+}
+
+// ── Clear results ────────────────────────────────────────
+function clearResults() {
+  document.getElementById('kpiTotal').textContent    = '—';
+  document.getElementById('kpiBarbera').textContent  = '—';
+  document.getElementById('kpiGrigio').textContent   = '—';
+  document.getElementById('kpiNebbiolo').textContent = '—';
+  if (barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
+  if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
+  document.getElementById('tableContainer').innerHTML = `
+    <div class="empty-state">
+      <p>Click <strong>Run Predictions</strong> to load results</p>
+    </div>`;
+  document.getElementById('status').className = 'status';
+}
+
+// ── Run Predictions ──────────────────────────────────────
+async function runPredictions() {
+  const apiUrl = document.getElementById('apiUrl').value.trim();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const btn    = document.querySelector('.btn-primary');
+
+  if (!apiUrl || !apiKey) {
+    showStatus('Please enter API URL and API Key.', 'error');
+    return;
+  }
+
+  btn.innerHTML = '<span class="spinner"></span>Running...';
+  btn.disabled = true;
+  showStatus(`Sending ${TEST_DATA.length} samples to API...`, 'info');
+
+  try {
+    // Send all requests in parallel
+    const promises = TEST_DATA.map((sample, i) =>
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
+        body: JSON.stringify(sample)
+      }).then(r => {
+        if (!r.ok) throw new Error(`Sample ${i+1}: HTTP ${r.status}`);
+        return r.json();
+      })
+    );
+
+    const results = await Promise.all(promises);
+
+    // ── Combine input + results ────────────────────────
+    const combined = TEST_DATA.map((sample, i) => ({
+      id: i + 1,
+      alcohol: sample.alcohol,
+      malic_acid: sample.malic_acid,
+      proline: sample.proline,
+      predicted_class: results[i].predicted_class,
+      predicted_label: results[i].predicted_label
+    }));
+
+    // ── Count classes ──────────────────────────────────
+    const counts = { Barbera: 0, Grigio: 0, Nebbiolo: 0 };
+    results.forEach(r => counts[r.predicted_label]++);
+
+    // ── Update KPIs ────────────────────────────────────
+    document.getElementById('kpiTotal').textContent    = results.length;
+    document.getElementById('kpiBarbera').textContent  = counts.Barbera;
+    document.getElementById('kpiGrigio').textContent   = counts.Grigio;
+    document.getElementById('kpiNebbiolo').textContent = counts.Nebbiolo;
+
+    // ── Render charts ──────────────────────────────────
+    renderBarChart(counts);
+    renderPieChart(counts);
+
+    // ── Render table ───────────────────────────────────
+    renderTable(combined);
+
+    showStatus(`✅ ${results.length} predictions completed successfully!`, 'success');
+
+  } catch (err) {
+    showStatus(`❌ Error: ${err.message}. Check API URL, key, or CORS settings.`, 'error');
+  } finally {
+    btn.innerHTML = 'Run Predictions';
+    btn.disabled = false;
+  }
+}
+
+// ── Bar Chart ────────────────────────────────────────────
+function renderBarChart(counts) {
+  if (barChartInstance) barChartInstance.destroy();
+  const ctx = document.getElementById('barChart').getContext('2d');
+  barChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Barbera', 'Grigio', 'Nebbiolo'],
+      datasets: [{
+        label: 'Predictions',
+        data: [counts.Barbera, counts.Grigio, counts.Nebbiolo],
+        backgroundColor: ['#c0392b', '#2980b9', '#27ae60'],
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 },
+          grid: { color: '#f0efeb' }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Pie Chart ─────────────────────────────────────────────
+function renderPieChart(counts) {
+  if (pieChartInstance) pieChartInstance.destroy();
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  pieChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Barbera', 'Grigio', 'Nebbiolo'],
+      datasets: [{
+        data: [counts.Barbera, counts.Grigio, counts.Nebbiolo],
+        backgroundColor: ['#c0392b', '#2980b9', '#27ae60'],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 16 } }
+      }
+    }
+  });
+}
+
+// ── Results Table ─────────────────────────────────────────
+function renderTable(data) {
+  const rows = data.map(r => `
+    <tr>
+      <td>${r.id}</td>
+      <td>${r.alcohol}</td>
+      <td>${r.malic_acid}</td>
+      <td>${r.proline}</td>
+      <td>${r.predicted_class}</td>
+      <td>
+        <span class="badge ${r.predicted_label.toLowerCase()}">
+          ${r.predicted_label}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('tableContainer').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Alcohol</th>
+          <th>Malic Acid</th>
+          <th>Proline</th>
+          <th>Class</th>
+          <th>Predicted Label</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+</script>
+</body>
+</html>
