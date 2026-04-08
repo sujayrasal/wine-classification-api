@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wine Predictor - Live Input</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f7f6f2;
+      --surface: #ffffff;
+      --border: #ddd8d0;
+      --text: #28251d;
+      --muted: #6f6d68;
+      --primary: #01696f;
+      --primary-soft: #e6f2f2;
+      --barbera: #c0392b;
+      --grigio: #2980b9;
+      --nebbiolo: #27ae60;
+      --error: #b42318;
+      --error-soft: #fdecec;
+      --shadow: 0 6px 20px rgba(0,0,0,0.06);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 18px 24px;
+    }
+
+    header h1 {
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .card h2 {
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .config-grid,
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .config-grid {
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 18px;
+    }
+
+    .form-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (max-width: 650px) {
+      .config-grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: bold;
+    }
+
+    .field input {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .field input:focus {
+      outline: 2px solid var(--primary);
+      border-color: var(--primary);
+    }
+
+    .field input.error {
+      border-color: var(--error);
+      background: var(--error-soft);
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #ece8e1;
+      color: var(--text);
+    }
+
+    .btn-chip {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+    }
+
+    .preset-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status.show { display: block; }
+    .status.info { background: #eaf4ff; color: #1d4f91; }
+    .status.success { background: #eafaf0; color: #1e6b3a; }
+    .status.error { background: #fdecec; color: var(--error); }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 36px 12px;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+    }
+
+    .result-box {
+      display: none;
+      padding: 18px;
+      border-radius: 12px;
+      margin-bottom: 18px;
+    }
+
+    .result-box.show { display: block; }
+
+    .visualization-panel {
+      margin-top: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .viz-container {
+      margin-top: 14px;
+    }
+
+    .viz-head {
+      margin-bottom: 14px;
+    }
+
+    .viz-chart {
+      display: grid;
+      gap: 10px;
+    }
+
+    .viz-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 60px;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .viz-label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .viz-track {
+      height: 10px;
+      background: #ece8e1;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .viz-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+
+    .viz-value {
+      font-size: 13px;
+      color: var(--text);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .chart-card canvas {
+      width: 100% !important;
+      height: 320px !important;
+    }
+
+    .result-box.barbera { background: #fdeaea; }
+    .result-box.grigio { background: #eaf4fd; }
+    .result-box.nebbiolo { background: #eaf8ef; }
+
+    .result-title {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .result-sub {
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .meter {
+      margin-bottom: 10px;
+    }
+
+    .meter-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 44px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .track {
+      height: 10px;
+      background: #ece8e1;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+
+    .fill.barbera { background: var(--barbera); }
+    .fill.grigio { background: var(--grigio); }
+    .fill.nebbiolo { background: var(--nebbiolo); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Wine Predictor - Live Input</h1>
+    <p>Expt 10 - Real-time prediction form</p>
+  </header>
+
+  <div class="container">
+    <section class="card">
+      <h2>Input Form</h2>
+
+      <div class="config-grid">
+        <div class="field">
+          <label for="apiUrl">API URL</label>
+          <input id="apiUrl" type="text" value="http://127.0.0.1:8000/predict" />
+        </div>
+        <div class="field">
+          <label for="apiKey">API Key</label>
+          <input id="apiKey" type="password" value="wine-secret-key-2024" />
+        </div>
+      </div>
+
+      <div class="preset-row">
+        <button class="btn-chip" type="button" onclick="fillPreset('barbera')">Barbera sample</button>
+        <button class="btn-chip" type="button" onclick="fillPreset('grigio')">Grigio sample</button>
+        <button class="btn-chip" type="button" onclick="fillPreset('nebbiolo')">Nebbiolo sample</button>
+      </div>
+
+      <div class="form-grid" id="formGrid"></div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="predictBtn" type="button" onclick="predictWine()">Predict</button>
+        <button class="btn-secondary" type="button" onclick="resetForm()">Reset</button>
+      </div>
+
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="card">
+      <h2>Live Result</h2>
+
+      <div id="emptyState" class="empty">
+        Fill the form and click Predict to see the result.
+      </div>
+
+      <div id="resultBox" class="result-box">
+        <div id="resultTitle" class="result-title">Barbera</div>
+        <div id="resultSub" class="result-sub">Predicted class: 0</div>
+
+        <div class="meter">
+          <div class="meter-row">
+            <div>Barbera</div>
+            <div class="track"><div id="barberaFill" class="fill barbera"></div></div>
+            <div id="barberaPct">0%</div>
+          </div>
+          <div class="meter-row">
+            <div>Grigio</div>
+            <div class="track"><div id="grigioFill" class="fill grigio"></div></div>
+            <div id="grigioPct">0%</div>
+          </div>
+          <div class="meter-row">
+            <div>Nebbiolo</div>
+            <div class="track"><div id="nebbioloFill" class="fill nebbiolo"></div></div>
+            <div id="nebbioloPct">0%</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card chart-card" style="margin-top:16px;">
+        <h2>Sample Visualizations</h2>
+        <div style="display:grid; grid-template-columns:1fr; gap:20px;">
+          <div>
+            <canvas id="featureBarChart"></canvas>
+          </div>
+          <div>
+            <canvas id="featureRadarChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const fields = [
+      ["alcohol", "Alcohol", "14.23"],
+      ["malic_acid", "Malic Acid", "1.71"],
+      ["ash", "Ash", "2.43"],
+      ["alcalinity_of_ash", "Alcalinity of Ash", "15.6"],
+      ["magnesium", "Magnesium", "127"],
+      ["total_phenols", "Total Phenols", "2.80"],
+      ["flavanoids", "Flavanoids", "3.06"],
+      ["nonflavanoid_phenols", "Nonflavanoid Phenols", "0.28"],
+      ["proanthocyanins", "Proanthocyanins", "2.29"],
+      ["color_intensity", "Color Intensity", "5.64"],
+      ["hue", "Hue", "1.04"],
+      ["od280_od315_of_diluted_wines", "OD280 / OD315", "3.92"],
+      ["proline", "Proline", "1065"]
+    ];
+
+    const presets = {
+      barbera: {
+        alcohol: 14.23, malic_acid: 1.71, ash: 2.43, alcalinity_of_ash: 15.6,
+        magnesium: 127, total_phenols: 2.80, flavanoids: 3.06,
+        nonflavanoid_phenols: 0.28, proanthocyanins: 2.29, color_intensity: 5.64,
+        hue: 1.04, od280_od315_of_diluted_wines: 3.92, proline: 1065
+      },
+      grigio: {
+        alcohol: 12.37, malic_acid: 1.17, ash: 1.92, alcalinity_of_ash: 19.6,
+        magnesium: 78, total_phenols: 1.75, flavanoids: 1.63,
+        nonflavanoid_phenols: 0.16, proanthocyanins: 1.25, color_intensity: 3.30,
+        hue: 0.97, od280_od315_of_diluted_wines: 1.41, proline: 290
+      },
+      nebbiolo: {
+        alcohol: 13.16, malic_acid: 2.36, ash: 2.67, alcalinity_of_ash: 18.6,
+        magnesium: 101, total_phenols: 2.80, flavanoids: 3.24,
+        nonflavanoid_phenols: 0.30, proanthocyanins: 2.81, color_intensity: 5.68,
+        hue: 1.03, od280_od315_of_diluted_wines: 3.17, proline: 1185
+      }
+    };
+
+    let featureBarChart;
+    let featureRadarChart;
+
+    const featureLabels = [
+      "alcohol",
+      "malic_acid",
+      "ash",
+      "alcalinity_of_ash",
+      "magnesium",
+      "total_phenols",
+      "flavanoids",
+      "nonflavanoid_phenols",
+      "proanthocyanins",
+      "color_intensity",
+      "hue",
+      "od280_od315_of_diluted_wines",
+      "proline"
+    ];
+
+    const formGrid = document.getElementById("formGrid");
+
+    fields.forEach(([id, label, hint]) => {
+      const div = document.createElement("div");
+      div.className = "field";
+      div.innerHTML = `
+        <label for="${id}">${label}</label>
+        <input id="${id}" type="number" step="any" />
+        <div class="hint">Example: ${hint}</div>
+      `;
+      formGrid.appendChild(div);
+    });
+
+    function attachInputListeners() {
+      fields.forEach(([id]) => {
+        document.getElementById(id).addEventListener("input", updateChartsFromInputs);
+      });
+    }
+
+    function showStatus(msg, type) {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.className = `status show ${type}`;
+    }
+
+    function clearStatus() {
+      const el = document.getElementById("status");
+      el.textContent = "";
+      el.className = "status";
+    }
+
+    function fillPreset(type) {
+      const data = presets[type];
+      fields.forEach(([id]) => {
+        const input = document.getElementById(id);
+        input.value = data[id];
+        input.classList.remove("error");
+      });
+      clearStatus();
+      updateCharts(data);
+    }
+
+    function resetForm() {
+      fields.forEach(([id]) => {
+        const input = document.getElementById(id);
+        input.value = "";
+        input.classList.remove("error");
+      });
+      clearStatus();
+      document.getElementById("emptyState").style.display = "block";
+      document.getElementById("resultBox").className = "result-box";
+      document.getElementById("summaryBody").innerHTML = "";
+      setBars({Barbera: 0, Grigio: 0, Nebbiolo: 0});
+    }
+
+    function validateForm() {
+      let valid = true;
+      fields.forEach(([id]) => {
+        const input = document.getElementById(id);
+        if (input.value.trim() === "" || isNaN(Number(input.value))) {
+          input.classList.add("error");
+          valid = false;
+        } else {
+          input.classList.remove("error");
+        }
+      });
+      return valid;
+    }
+
+    function updateChartsFromInputs() {
+      const sample = {};
+      fields.forEach(([id]) => {
+        sample[id] = parseFloat(document.getElementById(id).value) || 0;
+      });
+      updateCharts(sample);
+    }
+
+    function getPayload() {
+      const payload = {};
+      fields.forEach(([id]) => {
+        payload[id] = parseFloat(document.getElementById(id).value);
+      });
+      return payload;
+    }
+
+    function setBars(scores) {
+      const map = {
+        Barbera: ["barberaFill", "barberaPct"],
+        Grigio: ["grigioFill", "grigioPct"],
+        Nebbiolo: ["nebbioloFill", "nebbioloPct"]
+      };
+
+      Object.keys(map).forEach(name => {
+        const [fillId, pctId] = map[name];
+        const value = scores[name] || 0;
+        document.getElementById(fillId).style.width = value + "%";
+        document.getElementById(pctId).textContent = value + "%";
+      });
+    }
+
+    function fakeScores(label) {
+      const scores = { Barbera: 12, Grigio: 12, Nebbiolo: 12 };
+      scores[label] = 76;
+      return scores;
+    }
+
+    function renderSummary(payload) {
+      const tbody = document.getElementById("summaryBody");
+      tbody.innerHTML = Object.entries(payload)
+        .map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`)
+        .join("");
+    }
+
+    function initCharts() {
+      const barCtx = document.getElementById("featureBarChart").getContext("2d");
+      const radarCtx = document.getElementById("featureRadarChart").getContext("2d");
+
+      featureBarChart = new Chart(barCtx, {
+        type: "bar",
+        data: {
+          labels: featureLabels,
+          datasets: [{
+            label: "Feature Values",
+            data: new Array(13).fill(0),
+            backgroundColor: "#01696f"
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+
+      featureRadarChart = new Chart(radarCtx, {
+        type: "radar",
+        data: {
+          labels: featureLabels,
+          datasets: [{
+            label: "Sample Shape",
+            data: new Array(13).fill(0),
+            backgroundColor: "rgba(1, 105, 111, 0.2)",
+            borderColor: "#01696f",
+            pointBackgroundColor: "#01696f"
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            r: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function ensureCharts() {
+      if (!featureBarChart || !featureRadarChart) {
+        initCharts();
+      }
+    }
+
+    function updateCharts(sample) {
+      ensureCharts();
+
+      const values = [
+        sample.alcohol || 0,
+        sample.malic_acid || 0,
+        sample.ash || 0,
+        sample.alcalinity_of_ash || 0,
+        sample.magnesium || 0,
+        sample.total_phenols || 0,
+        sample.flavanoids || 0,
+        sample.nonflavanoid_phenols || 0,
+        sample.proanthocyanins || 0,
+        sample.color_intensity || 0,
+        sample.hue || 0,
+        sample.od280_od315_of_diluted_wines || 0,
+        sample.proline || 0
+      ];
+
+      featureBarChart.data.datasets[0].data = values;
+      featureRadarChart.data.datasets[0].data = values;
+      featureBarChart.update();
+      featureRadarChart.update();
+    }
+
+
+    async function predictWine() {
+      const apiUrl = document.getElementById("apiUrl").value.trim();
+      const apiKey = document.getElementById("apiKey").value.trim();
+      const btn = document.getElementById("predictBtn");
+
+      clearStatus();
+
+      if (!validateForm()) {
+        showStatus("Please enter all 13 numeric values.", "error");
+        return;
+      }
+
+      if (!apiUrl || !apiKey) {
+        showStatus("Please enter API URL and API key.", "error");
+        return;
+      }
+
+      const payload = getPayload();
+      renderSummary(payload);
+
+      btn.disabled = true;
+      btn.textContent = "Predicting...";
+      showStatus("Sending request to FastAPI...", "info");
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": apiKey
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status);
+        }
+
+        const result = await response.json();
+
+        document.getElementById("emptyState").style.display = "none";
+        const box = document.getElementById("resultBox");
+        box.className = "result-box show " + result.predicted_label.toLowerCase();
+
+        document.getElementById("resultTitle").textContent = result.predicted_label;
+        document.getElementById("resultSub").textContent = "Predicted class: " + result.predicted_class;
+
+        setBars(fakeScores(result.predicted_label));
+        showStatus("Prediction completed successfully.", "success");
+
+      } catch (error) {
+        showStatus("Request failed: " + error.message + ". Check API, key, server, or CORS.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Predict";
+      }
+    }
+
+    setBars({Barbera: 0, Grigio: 0, Nebbiolo: 0});
+    initCharts();
+    attachInputListeners();
+  </script>
+</body>
+</html>
